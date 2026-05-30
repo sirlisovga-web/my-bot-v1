@@ -3,5 +3,6 @@ yt-dlp
 Pillow
 python-docx
 python-pptx
-pandas
 docx2pdf
+pandas
+openpyxl
