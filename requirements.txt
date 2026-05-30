@@ -1,0 +1,7 @@
+aiogram==3.13.0
+yt-dlp
+Pillow
+python-docx
+python-pptx
+pandas
+docx2pdf
