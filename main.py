@@ -14,7 +14,7 @@ import re
 from PIL import Image
 from pptx import Presentation
 
-TOKEN = "8621933941:AAFzOUkJUHoN-ny8OWTtwK69Fknh17jBWVc"
+TOKEN = os.getenv("BOT_TOKEN")
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
