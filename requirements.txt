@@ -1,5 +1,5 @@
 aiogram==3.7.0
 yt-dlp
 Pillow
-python-docx2pdf
 python-pptx
+docx2pdf
