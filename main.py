@@ -16,6 +16,11 @@ from pptx import Presentation
 
 TOKEN = os.getenv("BOT_TOKEN")
 
+# FIX: Render'da "Secret Files" orqali yuklangan cookie fayli shu yo'lda
+# joylashadi (/etc/secrets/<filename>). Bu YouTube'ning "Sign in to
+# confirm you're not a bot" xatosini kamaytirish uchun ishlatiladi.
+YOUTUBE_COOKIES_PATH = "/etc/secrets/cookies.txt"
+
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
 
@@ -26,6 +31,7 @@ video_links = {}  # YANGI: foydalanuvchi yuborgan link sifat tanlanguncha shu ye
 video_file_cache = {}  # YANGI: (url, sifat) -> Telegram file_id. Qayta yuklamaslik uchun
 music_file_cache = {}  # YANGI: youtube video_id -> Telegram file_id. Qo'shiqni qayta yuklamaslik uchun
 
+
 def main_menu():
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="🎥 Video Yuklash", callback_data="video")],
@@ -33,6 +39,7 @@ def main_menu():
         [InlineKeyboardButton(text="🎬 Kino / Multfilm", callback_data="movie")],
         [InlineKeyboardButton(text="📄 Offis Ishlari", callback_data="office")]
     ])
+
 
 @dp.message(Command("start"))
 async def start_command(message: Message):
@@ -266,11 +273,17 @@ async def _download_and_send_video(message_target, status, user_id, url, format_
             'format': format_selector,
             'merge_output_format': 'mp4',
             'noplaylist': True,
-           'extractor_args': {
-               'youtube': {
-                   'player_client': ['ios'],
-               }
-           },
+            # FIX: YouTube'ning "Sign in to confirm you're not a bot" xatosini
+            # kamaytirish uchun Render'dagi Secret File orqali yuklangan
+            # cookie fayli ishlatiladi. Fayl mavjud bo'lmasa (lokal test
+            # qilinganda) cookiefile umuman qo'shilmaydi, aks holda yt-dlp
+            # xato berib to'xtab qoladi.
+            **({'cookiefile': YOUTUBE_COOKIES_PATH} if os.path.exists(YOUTUBE_COOKIES_PATH) else {}),
+            'extractor_args': {
+                'youtube': {
+                    'player_client': ['ios'],
+                }
+            },
             'quiet': True
         }
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -361,13 +374,22 @@ async def search_music(message: Message):
     status = await message.answer("🔎 Qidirilmoqda...")
 
     try:
-        with yt_dlp.YoutubeDL(
-            {
-                "quiet": True,
-                "extract_flat": True,
-                "default_search": "ytsearch5"
-            }
-        ) as ydl:
+        search_opts = {
+            "quiet": True,
+            "extract_flat": True,
+            "default_search": "ytsearch5",
+            # FIX: qidiruv bosqichida ham cookie va player_client qo'shildi —
+            # avval faqat yuklash bosqichida bor edi, lekin "Sign in to
+            # confirm you're not a bot" xatosi aslida qidiruv chaqirig'ida
+            # ham chiqishi mumkin edi.
+            **({'cookiefile': YOUTUBE_COOKIES_PATH} if os.path.exists(YOUTUBE_COOKIES_PATH) else {}),
+            "extractor_args": {
+                "youtube": {
+                    "player_client": ["android"],
+                }
+            },
+        }
+        with yt_dlp.YoutubeDL(search_opts) as ydl:
             result = ydl.extract_info(f"ytsearch5:{message.text}", download=False)
 
         entries = result.get("entries", [])
@@ -443,15 +465,18 @@ async def select_music(callback: CallbackQuery):
     audio_path = f"audio_{callback.from_user.id}.mp3"
     try:
         ydl_opts = {
-            # FIX: aniqroq format ro'yxati — ba'zi formatlar (ayniqsa "web"
-            # klientidan kelganlari) "416 Requested Range Not Satisfiable"
-            # xatosini berishi mumkin. m4a/webm aniq ro'yxatlanganda bu kamroq
-            # uchraydi.
+            # FIX: avval shu kalit ("extractor_args") ikki marta yozilgan edi —
+            # Python'da takror kalit bo'lsa faqat oxirgisi qo'llanadi, ya'ni
+            # birinchi yozilgan ['ios'] variant butunlay e'tiborsiz qolardi.
+            # Endi bitta joyda, aniq qiymat bilan qoldirildi.
             'extractor_args': {
                 'youtube': {
-                    'player_client': ['ios'],
+                    'player_client': ['android', 'web'],
                 }
             },
+            # FIX: Secret File orqali yuklangan cookie shu yerga ham qo'shildi.
+            # Fayl topilmasa (masalan lokal sinovda) kalit umuman qo'shilmaydi.
+            **({'cookiefile': YOUTUBE_COOKIES_PATH} if os.path.exists(YOUTUBE_COOKIES_PATH) else {}),
             'format': 'bestaudio[ext=m4a]/bestaudio[ext=webm]/bestaudio/best',
             'outtmpl': f'audio_{callback.from_user.id}.%(ext)s',
             'noplaylist': True,
@@ -461,13 +486,6 @@ async def select_music(callback: CallbackQuery):
                 'preferredcodec': 'mp3',
                 'preferredquality': '192',
             }],
-            # FIX: YouTube'ning "android" klienti JavaScript runtime talab
-            # qilmaydi va "416" xatosiga kamroq uchraydi (web klientidan farqli)
-            'extractor_args': {
-                'youtube': {
-                    'player_client': ['android', 'web'],
-                }
-            },
         }
 
         max_attempts = 3
