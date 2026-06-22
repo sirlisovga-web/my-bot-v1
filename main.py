@@ -16,10 +16,24 @@ from pptx import Presentation
 
 TOKEN = os.getenv("BOT_TOKEN")
 
-# FIX: Render'da "Secret Files" orqali yuklangan cookie fayli shu yo'lda
-# joylashadi (/etc/secrets/<filename>). Bu YouTube'ning "Sign in to
-# confirm you're not a bot" xatosini kamaytirish uchun ishlatiladi.
-YOUTUBE_COOKIES_PATH = "/etc/secrets/cookies.txt"
+# FIX: Render'da "Secret Files" orqali yuklangan fayl /etc/secrets/<filename>
+# yo'lida joylashadi, lekin bu joy READ-ONLY (faqat o'qish uchun). yt-dlp esa
+# cookie jar'ni session davomida ba'zan qayta yozishga harakat qiladi, shu
+# sababli to'g'ridan-to'g'ri /etc/secrets dan foydalanilganda
+# "[Errno 30] Read-only file system" xatosi chiqadi. Yechim: dastur
+# ishga tushganda faylni yoziladigan /tmp papkasiga nusxalab olamiz va
+# yt-dlp'ga shu nusxani ko'rsatamiz.
+_RENDER_SECRET_COOKIES_PATH = "/etc/secrets/cookies.txt"
+YOUTUBE_COOKIES_PATH = "/tmp/cookies.txt"
+
+if os.path.exists(_RENDER_SECRET_COOKIES_PATH):
+    import shutil
+    try:
+        shutil.copyfile(_RENDER_SECRET_COOKIES_PATH, YOUTUBE_COOKIES_PATH)
+        logging.info("Cookie fayli /tmp ga nusxalandi: %s", YOUTUBE_COOKIES_PATH)
+    except Exception as e:
+        logging.warning("Cookie faylini nusxalashda xatolik: %s", e)
+        YOUTUBE_COOKIES_PATH = _RENDER_SECRET_COOKIES_PATH
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
