@@ -268,24 +268,28 @@ async def _download_and_send_video(message_target, status, user_id, url, format_
 
     filename = None
     try:
+        # FIX: cookie fayli faqat YouTube domenlari uchun mo'ljallangan.
+        # Avval shart qo'yilmagani uchun Instagram so'rovlariga ham
+        # YouTube cookie'si qo'shilib ketgan va Instagram yuklashni
+        # buzgan edi. Endi cookiefile FAQAT url YouTube bo'lganda qo'shiladi.
+        is_youtube = ("youtube.com" in url) or ("youtu.be" in url)
+
         ydl_opts = {
             'outtmpl': f'video_{user_id}.%(ext)s',
             'format': format_selector,
             'merge_output_format': 'mp4',
             'noplaylist': True,
-            # FIX: YouTube'ning "Sign in to confirm you're not a bot" xatosini
-            # kamaytirish uchun Render'dagi Secret File orqali yuklangan
-            # cookie fayli ishlatiladi. Fayl mavjud bo'lmasa (lokal test
-            # qilinganda) cookiefile umuman qo'shilmaydi, aks holda yt-dlp
-            # xato berib to'xtab qoladi.
-            **({'cookiefile': YOUTUBE_COOKIES_PATH} if os.path.exists(YOUTUBE_COOKIES_PATH) else {}),
-            'extractor_args': {
+            'quiet': True
+        }
+
+        if is_youtube:
+            if os.path.exists(YOUTUBE_COOKIES_PATH):
+                ydl_opts['cookiefile'] = YOUTUBE_COOKIES_PATH
+            ydl_opts['extractor_args'] = {
                 'youtube': {
                     'player_client': ['ios'],
                 }
-            },
-            'quiet': True
-        }
+            }
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
 
