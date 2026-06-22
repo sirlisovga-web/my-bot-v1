@@ -14,7 +14,7 @@ import re
 from PIL import Image
 from pptx import Presentation
 
-TOKEN = "8621933941:AAEy23zI85JvtRmXnt6alqr8DcTzvBDDvFM"
+TOKEN = "8621933941:AAFzOUkJUHoN-ny8OWTtwK69Fknh17jBWVc"
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
