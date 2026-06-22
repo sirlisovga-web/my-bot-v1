@@ -12,7 +12,6 @@ import yt_dlp
 import os
 import re
 from PIL import Image
-from docx2pdf import convert
 from pptx import Presentation
 
 TOKEN = "8621933941:AAEy23zI85JvtRmXnt6alqr8DcTzvBDDvFM"
