@@ -266,9 +266,11 @@ async def _download_and_send_video(message_target, status, user_id, url, format_
             'format': format_selector,
             'merge_output_format': 'mp4',
             'noplaylist': True,
-            'cookiefile': '/etc/secrets/cookies.txt',
-            'no_cookies_update': True,
-            'cookies_update': False,
+           'extractor_args': {
+               'youtube': {
+                   'player_client': ['ios'],
+               }
+           },
             'quiet': True
         }
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -445,9 +447,11 @@ async def select_music(callback: CallbackQuery):
             # klientidan kelganlari) "416 Requested Range Not Satisfiable"
             # xatosini berishi mumkin. m4a/webm aniq ro'yxatlanganda bu kamroq
             # uchraydi.
-            'cookiefile': '/etc/secrets/cookies.txt',
-            'no_cookies_update': True,
-            'cookies_update': False,
+            'extractor_args': {
+                'youtube': {
+                    'player_client': ['ios'],
+                }
+            },
             'format': 'bestaudio[ext=m4a]/bestaudio[ext=webm]/bestaudio/best',
             'outtmpl': f'audio_{callback.from_user.id}.%(ext)s',
             'noplaylist': True,
